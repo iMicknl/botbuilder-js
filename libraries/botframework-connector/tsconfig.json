@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2015",
+    "target": "ESNext",
     "module": "commonjs",
+    "strict": false,
     "declaration": true,
     "sourceMap": true,
     "outDir": "./lib",
     "rootDir": "./src",
-    "types" : ["node", "mocha", "jsonwebtoken"]
+    "types" : ["node"]
   },
   "include": [
     "src/**/*"

@@ -52,11 +52,22 @@ describe(`BotState`, function () {
         await botState.load(context);
         assert(cachedState(context, botState.stateKey).test === 'foo', `invalid initial state`);
         await botState.clear(context);
-        await botState.saveChanges(context);
         assert(!cachedState(context, botState.stateKey).hasOwnProperty('test'), `state not cleared on context.`);
-
+        await botState.saveChanges(context);
+        
         const items = await storage.read([storageKey]);
+        assert(items[storageKey], `state removed from storage.`);        
         assert(!items[storageKey].hasOwnProperty('test'), `state not cleared from storage.`);        
+    });
+
+    it(`should delete() state storage.`, async function () {
+        await botState.load(context);
+        assert(cachedState(context, botState.stateKey), `invalid initial state`);
+        await botState.delete(context);
+        assert(!cachedState(context, botState.stateKey), `state not cleared on context.`);
+        
+        const items = await storage.read([storageKey]);
+        assert(!items.hasOwnProperty(storageKey), `state not removed from storage.`);        
     });
 
     it(`should force immediate saveChanges() of state to storage.`, function (done) {
@@ -109,21 +120,6 @@ describe(`BotState`, function () {
     it(`should create new PropertyAccessors`, function (done) {
         let count = botState.createProperty('count', 1);
         assert(count !== undefined, `did not successfully create PropertyAccessor.`);
-        done();
-    });
-
-    it(`should not allow registering of PropertyAccessors with the same name`, function (done) {
-        const duplicateName = 'test';
-        let testA = botState.createProperty(duplicateName, 0);
-        try {
-            let testB = botState.createProperty(duplicateName, 0);
-        } catch (e) {
-            // Checking the error message because JavaScript does not have specific Error types like Python, e.g. ValueError.
-            // This message check verifies that the bot threw the correct error, and that not something else is breaking.
-            assert(e.message === `BotState.createProperty(): a property named '${duplicateName}' already exists.`, `another error was thrown: "${e.message}".`);
-            done();
-        }
-        throw new Error(`Should have raised a duplicate property name error.`);
         done();
     });
 });

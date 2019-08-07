@@ -5,7 +5,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-import { Activity, ActivityTypes, ConversationReference, InputHints, ResourceResponse } from 'botframework-schema';
+import { Activity, ActivityTypes, ConversationReference, InputHints, ResourceResponse, Mention } from 'botframework-schema';
 import { BotAdapter } from './botAdapter';
 import { shallowCopy } from './internal';
 
@@ -80,6 +80,72 @@ export class TurnContext {
     }
 
     /**
+     * Rewrites the activity text without any at mention.
+     * Use with caution because this function is altering the text on the Activity.
+     *
+     * @remarks
+     * Some channels, for example Microsoft Teams, add at mention details into the text on a message activity.
+     * This can interfere with later processing. This is a helper function to remove the at mention.
+     *
+     * ```JavaScript
+     * const updatedText = TurnContext.removeRecipientMention(context.request);
+     * ```
+     * @param activity The activity to alter the text on
+     */
+    public static removeRecipientMention(activity: Partial<Activity>): string {
+        return TurnContext.removeMentionText(activity, activity.recipient.id);
+    }
+
+    /**
+     * Rewrites the activity text without any at mention. Specifying a particular recipient id.
+     * Use with caution because this function is altering the text on the Activity.
+     *
+     * @remarks
+     * Some channels, for example Microsoft Teams, add at mention details into the text on a message activity.
+     * This can interfere with later processing. This is a helper function to remove the at mention.
+     *
+     * ```JavaScript
+     * const updatedText = TurnContext.removeRecipientMention(context.request);
+     * ```
+     * @param activity The activity to alter the text on
+     * @param id The recipient id of the at mention
+     */
+    public static removeMentionText(activity: Partial<Activity>, id: string): string {
+        var mentions = TurnContext.getMentions(activity);
+        for (var i=0; i<mentions.length; i++) {
+            if (mentions[i].mentioned.id === id) {
+                var mentionNameMatch = mentions[i].text.match(/(?<=<at.*>)(.*?)(?=<\/at>)/i);
+                if (mentionNameMatch.length > 0) {
+                    activity.text = activity.text.replace(mentionNameMatch[0], '');
+                    activity.text = activity.text.replace(/<at><\/at>/g, '');
+                }
+            }
+        }
+        return activity.text;
+    }
+
+    /**
+     * Returns the mentions on an activity.
+     *
+     * ```JavaScript
+     * const mentions = TurnContext.getMentions(context.request);
+     * ```
+     * @param activity The activity to alter the text on
+     * @param id The recipient id of the at mention
+     */
+    public static getMentions(activity: Partial<Activity>): Mention[] {
+        var result: Mention[] = [];
+        if (activity.entities !== undefined) {
+            for (var i=0; i<activity.entities.length; i++) {
+                if (activity.entities[i].type.toLowerCase() === 'mention') {
+                    result.push(activity.entities[i] as Mention);
+                }
+            }
+        }
+        return result;
+    } 
+
+    /**
      * Returns the conversation reference for an activity.
      *
      * @remarks
@@ -141,6 +207,32 @@ export class TurnContext {
     }
 
     /**
+     * Create a ConversationReference based on an outgoing Activity's ResourceResponse
+     *
+     * @remarks
+     * This method can be used to create a ConversationReference that can be stored
+     * and used later to delete or update the activity.
+     * ```javascript
+     * var reply = await context.sendActivity('Hi');
+     * var reference = TurnContext.getReplyConversationReference(context.activity, reply);
+     * ```
+     *
+     * @param activity Activity from which to pull Conversation info
+     * @param reply ResourceResponse returned from sendActivity
+     */
+    public static getReplyConversationReference(
+        activity: Partial<Activity>,
+        reply: ResourceResponse
+    ): Partial<ConversationReference> {
+        const reference: Partial<ConversationReference> = TurnContext.getConversationReference(activity);
+
+        // Update the reference with the new outgoing Activity's id.
+        reference.activityId = reply.id;
+
+        return reference;
+    }
+
+    /**
      * Sends a single activity or message to the user.
      *
      * @remarks
@@ -186,8 +278,8 @@ export class TurnContext {
      * ```
      * @param activities One or more activities to send to the user.
      */
-     public sendActivities(activities: Partial<Activity>[]): Promise<ResourceResponse[]> {
-        let sentNonTraceActivity: boolean = false;
+    public sendActivities(activities: Partial<Activity>[]): Promise<ResourceResponse[]> {
+        let sentNonTraceActivity = false;
         const ref: Partial<ConversationReference> = TurnContext.getConversationReference(this.activity);
         const output: Partial<Activity>[] = activities.map((a: Partial<Activity>) => {
             const o: Partial<Activity> = TurnContext.applyConversationReference({...a}, ref);
@@ -263,7 +355,7 @@ export class TurnContext {
      * This example shows how to listen for and logs outgoing `message` activities.
      *
      * ```JavaScript
-     * context.onSendActivities(await (ctx, activities, next) => {
+     * context.onSendActivities(async (ctx, activities, next) => {
      *    // Deliver activities
      *    await next();
      *
@@ -286,7 +378,7 @@ export class TurnContext {
      * This example shows how to listen for and logs updated activities.
      *
      * ```JavaScript
-     * context.onUpdateActivities(await (ctx, activity, next) => {
+     * context.onUpdateActivity(async (ctx, activity, next) => {
      *    // Replace activity
      *    await next();
      *
@@ -309,7 +401,7 @@ export class TurnContext {
      * This example shows how to listen for and logs deleted activities.
      *
      * ```JavaScript
-     * context.onDeleteActivities(await (ctx, reference, next) => {
+     * context.onDeleteActivity(async (ctx, reference, next) => {
      *    // Delete activity
      *    await next();
      *

@@ -17,7 +17,8 @@ To add the latest version of this package to your bot:
 npm install --save botbuilder-dialogs
 ```
 
-#### Use the Daily Build
+#### How to Use Daily Builds
+If you want to play with the very latest versions of botbuilder, you can opt in to working with the daily builds.  This is not meant to be used in a production environment and is for advanced development.  Quality will vary and you should only use daily builds for exploratory purposes. 
 
 To get access to the daily builds of this library, configure npm to use the MyGet feed before installing.
 
@@ -132,5 +133,7 @@ See this module in action in these example apps:
 [DialogSet](https://docs.microsoft.com/en-us/javascript/api/botbuilder-dialogs/dialogset) DialogSet is a container for multiple dialogs. Once added to a DialogSet, dialogs can be called and interlinked.
 
 [WaterfallDialog](https://docs.microsoft.com/en-us/javascript/api/botbuilder-dialogs/waterfalldialog) WaterfallDialogs execute a series of step functions in order, passing the resulting user input from each steo into the next step's function.
+
+[Track Waterfall Dialogs with Application Insights](https://github.com/Microsoft/botbuilder-js/tree/master/libraries/botbuilder-applicationinsights#use-with-waterfall-dialogs).
 
 [ComponentDialog](https://docs.microsoft.com/en-us/javascript/api/botbuilder-dialogs/componentdialog) ComponentDialogs are containers that encapsulate multiple sub-dialogs, but can be invoked like normal dialogs. This is useful for re-usable dialogs, or creating multiple dialogs with similarly named sub-dialogs that would otherwise collide.

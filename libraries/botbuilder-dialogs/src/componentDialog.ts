@@ -5,12 +5,12 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-import { TurnContext } from 'botbuilder-core';
+import { TurnContext, BotTelemetryClient, NullTelemetryClient } from 'botbuilder-core';
 import { Dialog, DialogInstance, DialogReason, DialogTurnResult, DialogTurnStatus } from './dialog';
 import { DialogContext, DialogState } from './dialogContext';
 import { DialogSet } from './dialogSet';
 
-const PERSISTED_DIALOG_STATE: string = 'dialogs';
+const PERSISTED_DIALOG_STATE = 'dialogs';
 
 /**
  * Base class for a dialog that contains other child dialogs.
@@ -24,7 +24,7 @@ const PERSISTED_DIALOG_STATE: string = 'dialogs';
  * the classes constructor:
  *
  * ```JavaScript
- * const { ComponentDialog, WaterfallDialog, TextPrompt, NumberPrompt } = require('botbuilder-dialogs);
+ * const { ComponentDialog, WaterfallDialog, TextPrompt, NumberPrompt } = require('botbuilder-dialogs');
  *
  * class FillProfileDialog extends ComponentDialog {
  *     constructor(dialogId) {
@@ -84,32 +84,34 @@ export class ComponentDialog<O extends object = {}> extends Dialog<O> {
         const dialogState: DialogState = { dialogStack: [] };
         outerDC.activeDialog.state[PERSISTED_DIALOG_STATE] = dialogState;
         const innerDC: DialogContext = new DialogContext(this.dialogs, outerDC.context, dialogState);
+        innerDC.parent = outerDC;
         const turnResult: DialogTurnResult<any> = await this.onBeginDialog(innerDC, options);
 
         // Check for end of inner dialog
         if (turnResult.status !== DialogTurnStatus.waiting) {
             // Return result to calling dialog
             return await this.endComponent(outerDC, turnResult.result);
-        } else {
-            // Just signal end of turn
-            return Dialog.EndOfTurn;
         }
+
+        // Just signal end of turn
+        return Dialog.EndOfTurn;
     }
 
     public async continueDialog(outerDC: DialogContext): Promise<DialogTurnResult> {
         // Continue execution of inner dialog.
         const dialogState: any = outerDC.activeDialog.state[PERSISTED_DIALOG_STATE];
         const innerDC: DialogContext = new DialogContext(this.dialogs, outerDC.context, dialogState);
+        innerDC.parent = outerDC;
         const turnResult: DialogTurnResult<any> = await this.onContinueDialog(innerDC);
 
         // Check for end of inner dialog
         if (turnResult.status !== DialogTurnStatus.waiting) {
             // Return result to calling dialog
             return await this.endComponent(outerDC, turnResult.result);
-        } else {
-            // Just signal end of turn
-            return Dialog.EndOfTurn;
         }
+
+        // Just signal end of turn
+        return Dialog.EndOfTurn;
     }
 
     public async resumeDialog(dc: DialogContext, reason: DialogReason, result?: any): Promise<DialogTurnResult> {
@@ -233,5 +235,21 @@ export class ComponentDialog<O extends object = {}> extends Dialog<O> {
      */
     protected endComponent(outerDC: DialogContext, result: any): Promise<DialogTurnResult> {
         return outerDC.endDialog(result);
+    }
+
+    /**
+     * Set the telemetry client, and also apply it to all child dialogs.
+     * Future dialogs added to the component will also inherit this client.
+     */
+    public set telemetryClient(client: BotTelemetryClient) {
+        this._telemetryClient = client ? client : new NullTelemetryClient();
+        this.dialogs.telemetryClient = client;
+    }
+
+    /**
+     * Get the current telemetry client.
+     */
+    public get telemetryClient(): BotTelemetryClient {
+        return this._telemetryClient;
     }
 }

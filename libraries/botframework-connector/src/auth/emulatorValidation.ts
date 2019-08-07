@@ -7,14 +7,16 @@
  */
 import * as jwt from 'jsonwebtoken';
 import { ClaimsIdentity } from './claimsIdentity';
-import { Constants } from './constants';
+import { AuthenticationConstants } from './authenticationConstants';
+import { GovernmentConstants } from './governmentConstants';
 import { ICredentialProvider } from './credentialProvider';
 import { JwtTokenExtractor } from './jwtTokenExtractor';
+import { JwtTokenValidation } from './jwtTokenValidation';
 
 /**
  * Validates and Examines JWT tokens from the Bot Framework Emulator
  */
-export module EmulatorValidation {
+export namespace EmulatorValidation {
 
     /**
      * TO BOT FROM EMULATOR: Token validation parameters when connecting to a channel.
@@ -25,7 +27,9 @@ export module EmulatorValidation {
             'https://login.microsoftonline.com/d6d49420-f39b-4df7-a1dc-d59a935871db/v2.0',      // Auth v3.1, 2.0 token
             'https://sts.windows.net/f8cdef31-a31e-4b4a-93e4-5f571e91255a/',                    // Auth v3.2, 1.0 token
             'https://login.microsoftonline.com/f8cdef31-a31e-4b4a-93e4-5f571e91255a/v2.0',      // Auth v3.2, 2.0 token
-            'https://sts.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47/'                     // ???
+            'https://sts.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47/',                    // ???
+            'https://sts.windows.net/cab8a31a-1906-4287-a0d8-4eef66b95f6e/',                    // US Gov Auth, 1.0 token
+            'https://login.microsoftonline.us/cab8a31a-1906-4287-a0d8-4eef66b95f6e/v2.0',       // US Gov Auth, 2.0 token
         ],
         audience: undefined, // Audience validation takes place manually in code.
         clockTolerance: 5 * 60,
@@ -90,18 +94,23 @@ export module EmulatorValidation {
      * A token issued by the Bot Framework will FAIL this check. Only Emulator tokens will pass.
      * @param  {string} authHeader The raw HTTP header in the format: "Bearer [longString]"
      * @param  {ICredentialProvider} credentials The user defined set of valid credentials, such as the AppId.
+     * @param  {string} channelService The channelService value that distinguishes public Azure from US Government Azure.
      * @returns {Promise<ClaimsIdentity>} A valid ClaimsIdentity.
      */
     export async function authenticateEmulatorToken(
         authHeader: string,
         credentials: ICredentialProvider,
+        channelService: string,
         channelId: string
     ): Promise<ClaimsIdentity> {
+        const openIdMetadataUrl = (channelService !== undefined && JwtTokenValidation.isGovernment(channelService)) ?
+            GovernmentConstants.ToBotFromEmulatorOpenIdMetadataUrl :
+            AuthenticationConstants.ToBotFromEmulatorOpenIdMetadataUrl;
 
         const tokenExtractor: JwtTokenExtractor = new JwtTokenExtractor(
             ToBotFromEmulatorTokenValidationParameters,
-            Constants.ToBotFromEmulatorOpenIdMetadataUrl,
-            Constants.AllowedSigningAlgorithms);
+            openIdMetadataUrl,
+            AuthenticationConstants.AllowedSigningAlgorithms);
 
         const identity: ClaimsIdentity = await tokenExtractor.getIdentityFromAuthHeader(authHeader, channelId);
         if (!identity) {
@@ -118,19 +127,19 @@ export module EmulatorValidation {
         // what we're looking for. Note that in a multi-tenant bot, this value
         // comes from developer code that may be reaching out to a service, hence the
         // Async validation.
-        const versionClaim: string = identity.getClaimValue(Constants.VersionClaim);
+        const versionClaim: string = identity.getClaimValue(AuthenticationConstants.VersionClaim);
         if (versionClaim === null) {
             throw new Error('Unauthorized. "ver" claim is required on Emulator Tokens.');
         }
 
-        let appId: string = '';
+        let appId = '';
 
         // The Emulator, depending on Version, sends the AppId via either the
         // appid claim (Version 1) or the Authorized Party claim (Version 2).
         if (!versionClaim || versionClaim === '1.0') {
             // either no Version or a version of "1.0" means we should look for
             // the claim in the "appid" claim.
-            const appIdClaim: string = identity.getClaimValue(Constants.AppIdClaim);
+            const appIdClaim: string = identity.getClaimValue(AuthenticationConstants.AppIdClaim);
             if (!appIdClaim) {
                 // No claim around AppID. Not Authorized.
                 throw new Error('Unauthorized. "appid" claim is required on Emulator Token version "1.0".');
@@ -139,7 +148,7 @@ export module EmulatorValidation {
             appId = appIdClaim;
         } else if (versionClaim === '2.0') {
             // Emulator, "2.0" puts the AppId in the "azp" claim.
-            const appZClaim: string = identity.getClaimValue(Constants.AuthorizedParty);
+            const appZClaim: string = identity.getClaimValue(AuthenticationConstants.AuthorizedParty);
             if (!appZClaim) {
                 // No claim around AppID. Not Authorized.
                 throw new Error('Unauthorized. "azp" claim is required on Emulator Token version "2.0".');
@@ -148,11 +157,11 @@ export module EmulatorValidation {
             appId = appZClaim;
         } else {
             // Unknown Version. Not Authorized.
-            throw new Error(`Unauthorized. Unknown Emulator Token version "${versionClaim}".`);
+            throw new Error(`Unauthorized. Unknown Emulator Token version "${ versionClaim }".`);
         }
 
         if (!await credentials.isValidAppId(appId)) {
-            throw new Error(`Unauthorized. Invalid AppId passed on token: ${appId}`);
+            throw new Error(`Unauthorized. Invalid AppId passed on token: ${ appId }`);
         }
 
         return identity;

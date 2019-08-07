@@ -334,4 +334,42 @@ describe(`TurnContext`, function () {
             });
         });
     });
+
+    it(`should get a conversation reference from a sent activity using getReplyConversationReference.`, function(done) {
+
+        const context = new TurnContext(new SimpleAdapter(), testMessage);
+        context.sendActivity({text: 'test'}).then((reply) => {
+            assert(reply.id,'reply has an id');
+
+            const reference = TurnContext.getReplyConversationReference(context.activity, reply);
+
+            assert(reference.activityId,'reference has an activity id');
+            assert(reference.activityId === reply.id,'reference id matches outgoing reply id');
+            done();
+        });
+    });
+
+    it ('should remove at mention from activity', function() {
+
+        var activity = {
+            type: 'message',
+            text: '<at>TestOAuth619</at> test activity',
+            recipient: { id: 'TestOAuth619' },
+            entities: [
+                {
+                    type: 'mention',
+                    text: `<at>TestOAuth619</at>`,
+                    mentioned: {
+                        name: 'Bot',
+                        id: `TestOAuth619`
+                    }
+                }
+            ]
+        };
+
+        var text = TurnContext.removeRecipientMention(activity);
+
+        assert(text,' test activity');
+        assert(activity.text,' test activity');
+    });
 });

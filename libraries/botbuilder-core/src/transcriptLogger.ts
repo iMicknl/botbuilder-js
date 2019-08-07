@@ -15,7 +15,6 @@ import { TurnContext } from './turnContext';
  */
 export class TranscriptLoggerMiddleware implements Middleware {
     private logger: TranscriptLogger;
-    private transcript: Activity[] = [];
 
     /**
      * Middleware for logging incoming and outgoing activities to a transcript store.
@@ -35,20 +34,22 @@ export class TranscriptLoggerMiddleware implements Middleware {
      * @param next Function to call at the end of the middleware chain.
      */
     public async onTurn(context: TurnContext, next: () => Promise<void>): Promise<void> {
+        let transcript: Activity[] = [];
+
         // log incoming activity at beginning of turn
         if (context.activity) {
             if (!context.activity.from.role) {
                 context.activity.from.role = 'user';
             }
 
-            this.logActivity(this.cloneActivity(context.activity));
+            this.logActivity(transcript, this.cloneActivity(context.activity));
         }
 
         // hook up onSend pipeline
-        context.onSendActivities(async (ctx: TurnContext, activities: Partial<Activity>[], next2:  () => Promise<ResourceResponse[]>) => {
+        context.onSendActivities(async (ctx: TurnContext, activities: Partial<Activity>[], next2: () => Promise<ResourceResponse[]>) => {
             // run full pipeline
             const responses: ResourceResponse[] = await next2();
-            activities.forEach((a: ResourceResponse) => this.logActivity(this.cloneActivity(a)));
+            activities.forEach((a: ResourceResponse) => this.logActivity(transcript, this.cloneActivity(a)));
 
             return responses;
         });
@@ -61,7 +62,7 @@ export class TranscriptLoggerMiddleware implements Middleware {
             // add Message Update activity
             const updateActivity: Activity = this.cloneActivity(activity);
             updateActivity.type = ActivityTypes.MessageUpdate;
-            this.logActivity(updateActivity);
+            this.logActivity(transcript, updateActivity);
 
             return response;
         });
@@ -82,20 +83,33 @@ export class TranscriptLoggerMiddleware implements Middleware {
                 false
             );
 
-            this.logActivity(<Activity>deleteActivity);
+            this.logActivity(transcript, <Activity>deleteActivity);
         });
 
         // process bot logic
         await next();
 
         // flush transcript at end of turn
-        while (this.transcript.length > 0) {
+        while (transcript.length > 0) {
             try {
-                const activity: Activity = this.transcript.shift();
-                this.logger.logActivity(activity);
+                const activity: Activity = transcript.shift();
+                // If the implementation of this.logger.logActivity() is asynchronous, we don't
+                // await it as to not block processing of activities.
+                // Because TranscriptLogger.logActivity() returns void or Promise<void>, we capture
+                // the result and see if it is a Promise.
+                const logActivityResult = this.logger.logActivity(activity);
+
+                // If this.logger.logActivity() returns a Promise, a catch is added in case there
+                // is no innate error handling in the method. This catch prevents
+                // UnhandledPromiseRejectionWarnings from being thrown and prints the error to the
+                // console.
+                if (logActivityResult instanceof Promise) {
+                    logActivityResult.catch(err => {
+                        this.transcriptLoggerErrorHandler(err);
+                    });
+                }
             } catch (err) {
-                // tslint:disable-next-line:no-console
-                console.error('TranscriptLoggerMiddleware logActivity failed', err);
+                this.transcriptLoggerErrorHandler(err);
             }
         }
     }
@@ -104,12 +118,12 @@ export class TranscriptLoggerMiddleware implements Middleware {
      * Logs the Activity.
      * @param activity Activity to log.
      */
-    private logActivity(activity: Activity): void {
+    private logActivity(transcript: Activity[], activity: Activity): void {
         if (!activity.timestamp) {
             activity.timestamp = new Date();
         }
 
-        this.transcript.push(activity);
+        transcript.push(activity);
     }
 
     /**
@@ -117,8 +131,22 @@ export class TranscriptLoggerMiddleware implements Middleware {
      * @param activity Activity to clone.
      */
     private cloneActivity(activity: Partial<Activity>): Activity {
-        const emptyActivity: Activity = {type: '', serviceUrl: '', channelId: '', from: undefined, conversation: undefined, recipient: undefined, text: '', label: '', valueType: ''};
-        return Object.assign(emptyActivity, activity);
+        return Object.assign(<Activity>{}, activity);
+    }
+
+    /**
+     * Error logging helper function.
+     * @param err Error or object to console.error out.
+     */
+    private transcriptLoggerErrorHandler(err: Error|any): void {
+        // tslint:disable:no-console
+        if (err instanceof Error) {
+            console.error(`TranscriptLoggerMiddleware logActivity failed: "${ err.message }"`);
+            console.error(err.stack);
+        } else {
+            console.error(`TranscriptLoggerMiddleware logActivity failed: "${ JSON.stringify(err) }"`);
+        }
+        // tslint:enable:no-console
     }
 }
 
@@ -186,21 +214,21 @@ export interface TranscriptStore extends TranscriptLogger {
 /**
  * Metadata for a stored transcript.
  */
-export class TranscriptInfo {
+export interface TranscriptInfo {
     /**
      * ChannelId that the transcript was taken from.
      */
-    public channelId: string;
+    channelId: string;
 
     /**
      * Conversation Id.
      */
-    public id: string;
+    id: string;
 
     /**
      * Date conversation was started.
      */
-    public created: Date;
+    created: Date;
 }
 
 /**
@@ -208,15 +236,15 @@ export class TranscriptInfo {
  * @param T type of items being paged in.
  */
 // tslint:disable-next-line:max-classes-per-file
-export class PagedResult<T> {
+export interface PagedResult<T> {
 
     /**
      * Page of items.
      */
-    public items: T[] = [];
+    items: T[];
 
     /**
      * Token used to page through multiple pages.
      */
-    public continuationToken: string;
+    continuationToken: string;
 }

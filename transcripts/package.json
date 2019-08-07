@@ -8,14 +8,14 @@
     "author": "Microsoft",
     "license": "MIT",
     "dependencies": {
-        "@types/node": "^9.3.0",
-        "@types/restify": "^5.0.7",
-        "botbuilder": "^4.0.0-m3.0",
-        "botbuilder-ai": "^4.0.0-m3.0",
-        "botbuilder-dialogs": "^4.0.0-m3.0"
+        "@types/node": "^10.12.18",
+        "@types/restify": "^7.2.1",
+        "botbuilder": "^4.2.1",
+        "botbuilder-ai": "^4.2.1",
+        "botbuilder-dialogs": "^4.2.1"
     },
     "devDependencies": {
         "mocha": "^5.2.0",
-        "nyc": "^11.4.1"
+        "nyc": "^13.2.0"
     }
 }

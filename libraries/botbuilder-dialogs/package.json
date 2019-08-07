@@ -2,7 +2,7 @@
   "name": "botbuilder-dialogs",
   "author": "Microsoft Corp.",
   "description": "A dialog stack based conversation manager for Microsoft BotBuilder.",
-  "version": "4.0.0",
+  "version": "4.1.6",
   "license": "MIT",
   "keywords": [
     "botbuilder",
@@ -20,12 +20,12 @@
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
   "dependencies": {
-    "@microsoft/recognizers-text-choice": "^1.1.2",
-    "@microsoft/recognizers-text-date-time": "^1.1.2",
-    "@microsoft/recognizers-text-number": "^1.1.2",
-    "@microsoft/recognizers-text-suite": "^1.1.2",
-    "@types/node": "^9.3.0",
-    "botbuilder-core": "^4.0.0"
+    "@microsoft/recognizers-text-choice": "1.1.2",
+    "@microsoft/recognizers-text-date-time": "1.1.2",
+    "@microsoft/recognizers-text-number": "1.1.2",
+    "@microsoft/recognizers-text-suite": "1.1.2",
+    "@types/node": "^10.12.18",
+    "botbuilder-core": "4.1.6"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.47",
@@ -41,5 +41,9 @@
     "build-docs": "typedoc --theme markdown --entryPoint botbuilder-dialogs --excludePrivate --includeDeclarations --ignoreCompilerErrors --module amd --out ..\\..\\doc\\botbuilder-dialogs .\\lib\\index.d.ts --hideGenerator --name \"Bot Builder SDK - Dialogs\" --readme none",
     "clean": "erase /q /s .\\lib",
     "set-version": "npm version --allow-same-version ${Version}"
-  }
+  },
+  "files": [
+    "/lib",
+    "/src"   
+  ]
 }

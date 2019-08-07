@@ -4,36 +4,47 @@
     "search": {
       "score": 0.9999993
     },
-    "None": {
-      "score": 0.0000120633467
-    },
     "EntityTests": {
-      "score": 0.000009122724
+      "score": 0.00001044335
     },
-    "Weather_GetForecast": {
-      "score": 0.000003749986
+    "Roles": {
+      "score": 0.00000598274755
     },
     "Travel": {
-      "score": 0.00000353740256
+      "score": 0.00000309763345
+    },
+    "None": {
+      "score": 0.00000238094663
+    },
+    "Weather_GetForecast": {
+      "score": 0.00000102792524
     },
     "SpecifyName": {
-      "score": 0.00000175083869
+      "score": 3.0666667e-9
     },
     "Delivery": {
-      "score": 0.00000113355657
+      "score": 1.8e-9
     },
     "Greeting": {
-      "score": 5.875e-10
+      "score": 1.0875e-9
     },
     "Cancel": {
-      "score": 5.47058843e-10
+      "score": 1.01764708e-9
     },
     "Help": {
-      "score": 5.47058843e-10
+      "score": 1.01764708e-9
     }
   },
   "entities": {
     "$instance": {
+      "personName": [
+        {
+          "startIndex": 49,
+          "endIndex": 61,
+          "text": "bart simpson",
+          "type": "builtin.personName"
+        }
+      ],
       "Part": [
         {
           "startIndex": 71,
@@ -67,6 +78,9 @@
         }
       ]
     },
+    "personName": [
+      "bart simpson"
+    ],
     "Part": [
       "kb435"
     ],
@@ -84,7 +98,7 @@
     "label": "negative",
     "score": 0.210341513
   },
-  "luisResult": {
+  "v2": {
     "query": "email about something wicked this way comes from bart simpson and also kb435",
     "topScoringIntent": {
       "intent": "search",
@@ -96,43 +110,53 @@
         "score": 0.9999993
       },
       {
-        "intent": "None",
-        "score": 0.0000120633467
-      },
-      {
         "intent": "EntityTests",
-        "score": 0.000009122724
+        "score": 0.00001044335
       },
       {
-        "intent": "Weather.GetForecast",
-        "score": 0.000003749986
+        "intent": "Roles",
+        "score": 0.00000598274755
       },
       {
         "intent": "Travel",
-        "score": 0.00000353740256
+        "score": 0.00000309763345
+      },
+      {
+        "intent": "None",
+        "score": 0.00000238094663
+      },
+      {
+        "intent": "Weather.GetForecast",
+        "score": 0.00000102792524
       },
       {
         "intent": "SpecifyName",
-        "score": 0.00000175083869
+        "score": 3.0666667e-9
       },
       {
         "intent": "Delivery",
-        "score": 0.00000113355657
+        "score": 1.8e-9
       },
       {
         "intent": "Greeting",
-        "score": 5.875e-10
+        "score": 1.0875e-9
       },
       {
         "intent": "Cancel",
-        "score": 5.47058843e-10
+        "score": 1.01764708e-9
       },
       {
         "intent": "Help",
-        "score": 5.47058843e-10
+        "score": 1.01764708e-9
       }
     ],
     "entities": [
+      {
+        "entity": "bart simpson",
+        "type": "builtin.personName",
+        "startIndex": 49,
+        "endIndex": 60
+      },
       {
         "entity": "kb435",
         "type": "Part",
